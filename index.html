@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>広告情報入力（卒業年度別）</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    h3 { margin-top: 1.5em; }
+    label { display: block; margin: 0.4em 0; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 0.6em;
+      margin: 0.4em 0;
+      box-sizing: border-box;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div id="selectArea"></div>
+
+  <form id="step2" class="hidden">
+    <p id="selected-name"></p>
+    <label>広告費：</label>
+    <input type="text" id="adCost">
+    <label>広告内容：</label>
+    <textarea id="adContent"></textarea>
+    <label>受け取り方：</label>
+    <input type="text" id="receiveMethod">
+    <label>入金方法：</label>
+    <input type="text" id="paymentMethod">
+    <label>入金：</label>
+    <select id="paymentStatus">
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+    <button id="submitAll">送信</button>
+  </form>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzLBZ-lW54WRSbfXT0Zw1Fe_eWu8iN-0Gwy0UYMFI35f05MzpS-j6F0GK9VCQpCzBH0/exec";
+    let userDataList = [];
+
+    window.onload = () => {
+      fetch(GAS_URL)
+        .then(res => res.json())
+        .then(data => {
+          userDataList = data;
+          const area = document.getElementById("selectArea");
+
+          const grouped = {};
+          data.forEach(user => {
+            if (!grouped[user.graduation]) {
+              grouped[user.graduation] = [];
+            }
+            grouped[user.graduation].push(user.name);
+          });
+
+          for (const year of Object.keys(grouped).sort()) {
+            const section = document.createElement("div");
+            section.innerHTML = `<h3>${year}年卒</h3>`;
+            grouped[year].forEach(name => {
+              section.innerHTML += `
+                <label>
+                  <input type="radio" name="userName" value="${name}"> ${name}
+                </label>`;
+            });
+            area.appendChild(section);
+          }
+
+          const btn = document.createElement("button");
+          btn.textContent = "次へ";
+          btn.onclick = (e) => {
+            e.preventDefault();
+            const selected = document.querySelector('input[name="userName"]:checked');
+            if (!selected) {
+              alert("名前を選んでください");
+              return;
+            }
+            document.getElementById("selected-name").textContent = "入力中：" + selected.value;
+            document.getElementById("selectArea").classList.add("hidden");
+            document.getElementById("step2").classList.remove("hidden");
+          };
+          area.appendChild(btn);
+        });
+    };
+
+    document.getElementById("submitAll").addEventListener("click", function(){
+      const data = {
+        name: document.querySelector('input[name="userName"]:checked').value,
+        adCost: document.getElementById("adCost").value,
+        adContent: document.getElementById("adContent").value,
+        receiveMethod: document.getElementById("receiveMethod").value,
+        paymentMethod: document.getElementById("paymentMethod").value,
+        paymentStatus: document.getElementById("paymentStatus").value
+      };
+
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" }
+      }).then(res => {
+        if (res.ok) {
+          alert("送信が完了しました！");
+          location.reload();
+        } else {
+          alert("送信に失敗しました");
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
